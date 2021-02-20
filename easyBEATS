@@ -13,7 +13,7 @@ INSTALL_LOCAL=true #set to false if you only want to compile without installing
 CLEAN_UP=true #set to false if you want to keep the source files on your Pi
 
 function clean_up {
-  sudo rm -rf $HOME/${WORKING_DIR}
+  rm -rf $HOME/${WORKING_DIR}
   echo "Working directory deleted."
 }
 
@@ -28,17 +28,17 @@ function compile_beats {
   done
   if [ $USE_SWAP = true ];
   then
-    sudo swapoff -v /swapfile
-    sudo rm /swapfile
+     swapoff -v /swapfile
+     rm /swapfile
     echo "Swap space disabled."
   fi
 }
 
 function configure_swap {
-  sudo fallocate -l 2G /swapfile
-  sudo chmod 600 /swapfile
-  sudo mkswap /swapfile
-  sudo swapon /swapfile
+   fallocate -l 2G /swapfile
+   chmod 600 /swapfile
+   mkswap /swapfile
+   swapon /swapfile
 }
 
 function checkout_version {
@@ -56,13 +56,13 @@ function install_dependencies {
   if [ $(dpkg-query -W -f='${Status}' python-pip 2>/dev/null | grep -c "ok installed") -eq 0 ];
   then
     echo "Installing python-pip..."
-    sudo apt-get install python-pip -y;
+     apt-get install python-pip -y;
   fi
 
   if [ $(dpkg-query -W -f='${Status}' git 2>/dev/null | grep -c "ok installed") -eq 0 ];
   then
     echo "Installing git..."
-    sudo apt-get install git -y;
+     apt-get install git -y;
   fi
 
   if python -c 'import pkgutil; exit(pkgutil.find_loader("virtualenv"))';
@@ -74,32 +74,32 @@ function install_dependencies {
   if [ $(dpkg-query -W -f='${Status}' make 2>/dev/null | grep -c "ok installed") -eq 0 ];
   then
     echo "Installing make..."
-    sudo apt-get install make -y;
+     apt-get install make -y;
   fi
 
   if [ $(dpkg-query -W -f='${Status}' gcc 2>/dev/null | grep -c "ok installed") -eq 0 ];
   then
     echo "Installing GCC..."
-    sudo apt-get install build-essential manpages-dev -y;
+     apt-get install build-essential manpages-dev -y;
   fi
 
   if [ $(dpkg-query -W -f='${Status}' golang-go 2>/dev/null | grep -c "ok installed") -eq 1 ];
   then
     echo "Removing outdated go version"
-    sudo apt remove golang-go -y;
-    sudo apt autoremove -y;
+     apt remove golang-go -y;
+     apt autoremove -y;
   fi
 
   echo "Installing go..."
   wget https://dl.google.com/go/go1.13.8.linux-armv6l.tar.gz
-  sudo tar -C /usr/share -xzf go1.13.8.linux-armv6l.tar.gz
-  sudo chmod -R 775 /usr/share/go/
-  sudo chmod -R 777 /usr/share/go/pkg/linux_arm/
+   tar -C /usr/share -xzf go1.13.8.linux-armv6l.tar.gz
+   chmod -R 775 /usr/share/go/
+   chmod -R 777 /usr/share/go/pkg/linux_arm/
   export PATH=$PATH:/usr/share/go/bin;
   export GOPATH=$HOME/${WORKING_DIR};
   rm go1.13.8.linux-armv6l.tar.gz;
 
-  sudo apt-get install libpcap-dev -y
+   apt-get install libpcap-dev -y
 
   echo "Dependency installation complete."
 }
@@ -110,8 +110,8 @@ function create_working_directory {
 }
 
 function update_system {
-  sudo DEBIAN_FRONTEND=noninteractive apt-get -yq update > /dev/null
-  sudo DEBIAN_FRONTEND=noninteractive apt-get -yq upgrade > /dev/null
+   DEBIAN_FRONTEND=noninteractive apt-get -yq update > /dev/null
+   DEBIAN_FRONTEND=noninteractive apt-get -yq upgrade > /dev/null
   echo "System update complete"
 }
 
@@ -121,41 +121,41 @@ function install_local {
     if [ ! -d /usr/share/$beat ];
     then
       echo "Creating /usr/share/$beat directory..."
-      sudo mkdir -p /usr/share/$beat/bin;
+       mkdir -p /usr/share/$beat/bin;
     fi
 
     if  [ ! -d /etc/$beat ];
     then
       echo "Creating /etc/$beat directory..."
-      sudo mkdir -p /etc/$beat;
+       mkdir -p /etc/$beat;
     fi
 
     if [ ! -d /var/lib/$beat ];
     then
       echo "Creating /var/lib/$beat directory..."
-      sudo mkdir -p /var/lib/$beat
+       mkdir -p /var/lib/$beat
     fi
 
     echo "Installing $beat locally..."
-    sudo cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat} /usr/share/${beat}/bin
-    sudo cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat}.reference.yml /etc/${beat}
-    sudo cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat}.yml /etc/${beat}
+     cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat} /usr/share/${beat}/bin
+     cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat}.reference.yml /etc/${beat}
+     cp $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/${beat}.yml /etc/${beat}
 
     if [ $beat = "filebeat" ] || [ $beat = "metricbeat" ];
     then
-      sudo cp -R $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/module /usr/share/${beat}
-      sudo cp -R $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/modules.d/ /etc/${beat}
+       cp -R $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/module /usr/share/${beat}
+       cp -R $HOME/${WORKING_DIR}/src/github.com/elastic/beats/${beat}/modules.d/ /etc/${beat}
     fi
 
-    sudo cp $HOME/easyBEATS/services/${beat}.service /lib/systemd/system
+     cp $HOME/easyBEATS/services/${beat}.service /lib/systemd/system
 
 
 
-    sudo chmod -R 755 /etc/${beat}/;
-    sudo chown -R root:root /etc/${beat};
-    sudo chown -R root:root /usr/share/${beat}/*;
-    sudo /bin/systemctl daemon-reload;
-    sudo systemctl enable ${beat};
+     chmod -R 755 /etc/${beat}/;
+     chown -R root:root /etc/${beat};
+     chown -R root:root /usr/share/${beat}/*;
+     /bin/systemctl daemon-reload;
+     systemctl enable ${beat};
   done
 }
 
