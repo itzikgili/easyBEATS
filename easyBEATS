@@ -8,7 +8,7 @@ WORKING_DIR="beat-factory" #this directory will be created in /home/pi
 #visit https://github.com/elastic/beats/releases to find other version numbers and commit numbers
 BEAT_VERSION="v7.5.2" #the version tag name or commit id of the Beats release you want to use
 #add as many beats as you want to BEAT_NAME separated by a space
-BEAT_NAME=( metricbeat filebeat ) #metricbeat filebeat packetbeat auditbeat heartbeat
+BEAT_NAME=( metricbeat filebeat heartbeat ) #metricbeat filebeat packetbeat auditbeat heartbeat
 INSTALL_LOCAL=true #set to false if you only want to compile without installing
 CLEAN_UP=true #set to false if you want to keep the source files on your Pi
 
