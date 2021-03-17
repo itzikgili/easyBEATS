@@ -1,118 +1,40 @@
 #!/bin/bash
 
+
 # Script variables
-UPDATE_SYSTEM=true #change to false if you don't want to upgrade your whole system
-INSTALL_DEPS=true #change to false if you have already run this script successfully before
-USE_SWAP=true #change to fales if you're using a Pi4 with 2GB of RAM or more
+
 WORKING_DIR="beat-factory" #this directory will be created in /home/pi
-#visit https://github.com/elastic/beats/releases to find other version numbers and commit numbers
-BEAT_VERSION="v7.5.2" #the version tag name or commit id of the Beats release you want to use
-#add as many beats as you want to BEAT_NAME separated by a space
 BEAT_NAME=( metricbeat filebeat heartbeat ) #metricbeat filebeat packetbeat auditbeat heartbeat
-INSTALL_LOCAL=true #set to false if you only want to compile without installing
-CLEAN_UP=true #set to false if you want to keep the source files on your Pi
+DOWNLOAD_PATH=""https://www.dropbox.com/s/0dpydq4sj0luaoa/beat-factory.zip?dl=1""
+ # The path top the pre-compiled easyBeats - if downloaded from dropbox dl=1 is mendatory to create a direct 
+LOG_PATH="/var/log"
+LOG_DIR_NAME="wander"
+WANDERFUL_BACKEND_DIR="$HOME/WanderfullController"
+BRANCH_NAME="logging"
 
-function clean_up {
-  rm -rf $HOME/${WORKING_DIR}
-  echo "Working directory deleted."
+
+#functions:
+
+function create_log_dirs {
+
+	echo "Setting full permissions on parent log dir"
+	chmod -R 777 "${LOG_PATH}"
+	
+	echo "Creating a log directory for wander"
+	mkdir ${LOG_PATH}/${LOG_DIR_NAME}
 }
 
-function compile_beats {
-  for beat in "${BEAT_NAME[@]}";
-  do
-    echo "Compiling $beat"
-    cd $HOME/${WORKING_DIR}/src/github.com/elastic/beats/$beat;
-    GOOS=linux GOARCH=arm go get;
-    make;
-    echo "$beat created"
-  done
-  if [ $USE_SWAP = true ];
-  then
-     swapoff -v /swapfile
-     rm /swapfile
-    echo "Swap space disabled."
-  fi
+function install_deps {
+	apt-get install zip #install zip to uncompress the files
 }
 
-function configure_swap {
-   fallocate -l 2G /swapfile
-   chmod 600 /swapfile
-   mkswap /swapfile
-   swapon /swapfile
-}
+function download_and_unzip {
+   # Download pre-compiled beat-factory
+   wget -O ${HOME}/${WORKING_DIR}/ easyBeats.zip "${DOWNLOAD_PATH}"
+   cd ${HOME}/${WORKING_DIR}/
 
-function checkout_version {
-  cd $HOME/${WORKING_DIR}/src/github.com/elastic/beats
-  git fetch
-  git checkout $BEAT_VERSION
-}
-
-function copy_source_code {
-  cd $HOME/${WORKING_DIR}/src/github.com/elastic
-  go get github.com/elastic/beats;
-}
-
-function install_dependencies {
-  if [ $(dpkg-query -W -f='${Status}' python-pip 2>/dev/null | grep -c "ok installed") -eq 0 ];
-  then
-    echo "Installing python-pip..."
-     apt-get install python-pip -y;
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' git 2>/dev/null | grep -c "ok installed") -eq 0 ];
-  then
-    echo "Installing git..."
-     apt-get install git -y;
-  fi
-
-  if python -c 'import pkgutil; exit(pkgutil.find_loader("virtualenv"))';
-  then
-    echo "Installing virtualenv..."
-    pip install virtualenv
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' make 2>/dev/null | grep -c "ok installed") -eq 0 ];
-  then
-    echo "Installing make..."
-     apt-get install make -y;
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' gcc 2>/dev/null | grep -c "ok installed") -eq 0 ];
-  then
-    echo "Installing GCC..."
-     apt-get install build-essential manpages-dev -y;
-  fi
-
-  if [ $(dpkg-query -W -f='${Status}' golang-go 2>/dev/null | grep -c "ok installed") -eq 1 ];
-  then
-    echo "Removing outdated go version"
-     apt remove golang-go -y;
-     apt autoremove -y;
-  fi
-
-  echo "Installing go..."
-  wget https://dl.google.com/go/go1.13.8.linux-armv6l.tar.gz
-   tar -C /usr/share -xzf go1.13.8.linux-armv6l.tar.gz
-   chmod -R 775 /usr/share/go/
-   chmod -R 777 /usr/share/go/pkg/linux_arm/
-  export PATH=$PATH:/usr/share/go/bin;
-  export GOPATH=$HOME/${WORKING_DIR};
-  rm go1.13.8.linux-armv6l.tar.gz;
-
-   apt-get install libpcap-dev -y
-
-  echo "Dependency installation complete."
-}
-
-function create_working_directory {
-  mkdir -p $HOME/${WORKING_DIR}/src/github.com/elastic;
-  echo "Working directory created"
-}
-
-function update_system {
-   DEBIAN_FRONTEND=noninteractive apt-get -yq update > /dev/null
-   DEBIAN_FRONTEND=noninteractive apt-get -yq upgrade > /dev/null
-  echo "System update complete"
+   # Unzip the file
+   unzip -o ${HOME}/${WORKING_DIR}/easyBeats.zip
 }
 
 function install_local {
@@ -159,73 +81,50 @@ function install_local {
   done
 }
 
-echo "---------------------------------------------------------------"
-if [ $UPDATE_SYSTEM = true ];
-then
-  echo "Performing system update..."
-  update_system
-else
-  echo "Skipping system update"
-fi
+function update_wander {
+	echo "Entering wander directory: ${WANDERFUL_BACKEND_DIR}"
+	cd ${WANDERFUL_BACKEND_DIR}
+	
+    echo "Fetching git branches"
+	git fetch
+	
+	echo "Checking out branch: ${BRANCH_NAME}"
+	git checkout ${BRANCH_NAME}
+	
+	echo "Pulling Git"
+	git pull
+}
 
-echo "---------------------------------------------------------------"
+function install_winston {
+	cd ${HOME}
+	npm install winston
+}
 
-if [ ! -d $HOME/${WORKING_DIR} ];
-then
-  create_working_directory
-else
-  echo "Working directory already exists"
-fi
 
-echo "---------------------------------------------------------------"
+#starting a progress:
 
-if [ $INSTALL_DEPS = true ];
-then
-  echo "Installing dependencies..."
-  install_dependencies
-else
-  export PATH=$PATH:/usr/share/go/bin;
-  export GOPATH=$HOME/${WORKING_DIR};
-  echo "Skipping dependency installation"
-fi
+echo "Creating a working directory for the script"
+mkdir $HOME/${WORKING_DIR}/
+   
+echo "Creating log directory"
+create_log_dirs
 
-echo "---------------------------------------------------------------"
+echo "Install dependencies"
+install_deps
 
-echo "Copying source code from Elastic"
-copy_source_code
+echo "Downloading the compressed directory"
+download_and_unzip
 
-echo "---------------------------------------------------------------"
+echo "Installing on your local system..."
+install_local
 
-echo "Checking out Beats version $BEAT_VERSION"
-checkout_version
+# TODO: get_the_new_version -
+echo "Updating to new version with git"
+update_wander
 
-echo "---------------------------------------------------------------"
+echo "Installing winston"
+install_winston
 
-if [ $USE_SWAP = true ];
-then
-  echo "Configuring swap space..."
-  configure_swap
-else
-  echo "Proceeding without swap space."
-fi
-
-echo "---------------------------------------------------------------"
-
-echo "Compiling Beats..."
-compile_beats
-
-echo "---------------------------------------------------------------"
-
-if [ $INSTALL_LOCAL = true ];
-then
-  echo "Installing on your local system..."
-  install_local
-fi
-
-if [ $CLEAN_UP = true ];
-then
-  echo "Cleaning up working files..."
-  clean_up
-fi
+# TODO: DELETE ALL
 
 echo "Complete"
